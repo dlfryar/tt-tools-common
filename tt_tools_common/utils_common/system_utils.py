@@ -10,6 +10,7 @@ import psutil
 import distro
 import platform
 import requests
+import smbios
 from typing import Union
 from tt_tools_common.ui_common.themes import CMD_LINE_COLOR
 
@@ -91,13 +92,23 @@ def get_host_info() -> dict:
     distro_name: str = distro.name(pretty=True)
     kernel: str = uname.release
     hostname: str = uname.node
+    cpu_si_vendor = '{}'.format(smbios.value('processor','manufacturer'))
+    machine_arch = uname.machine
+
+    # There are many Arm silicon vendors and RISC-V vendors
+    # and there are code checks to generally disallow Arm
+    # so adding the Arm silicon vendor allows CPUs that are
+    # known to work. There are only 3 x86_64 vendors (Intel, AMD, Via).
+    compatible_cpu_vendors = ["Ampere", "Intel", "AMD", "Advanced Micro Devices"]
+    if any(x in cpu_si_vendor for x in compatible_cpu_vendors):
+        machine_arch = cpu_si_vendor[:12] + ' ' + machine_arch
 
     return {
         "OS": os,
         "Distro": distro_name,
         "Kernel": kernel,
         "Hostname": hostname,
-        "Platform": uname.machine,
+        "Platform": machine_arch,
         "Python": platform.python_version(),
         "Memory": get_size(svmem.total),
         "Driver": "TTKMD " + get_driver_version(),
